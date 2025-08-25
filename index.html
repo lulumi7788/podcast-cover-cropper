@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Podcast 首圖裁切器｜1:1 至少 1400×1400</title>
+  <meta name="description" content="將圖片裁成 1:1 並輸出 1400×1400（或更大）PNG / JPEG，適合 Podcast 封面上架使用。" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
+  <style>
+    :root{--bg:#0f172a;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#22d3ee;--accent2:#60a5fa}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";background:linear-gradient(180deg,#0f172a,#111827);color:var(--text)}
+    header{padding:20px 16px;text-align:center;border-bottom:1px solid #1f2937;background:rgba(17,24,39,.6);backdrop-filter: blur(6px);position:sticky;top:0;z-index:10}
+    h1{margin:0;font-size:20px;letter-spacing:.5px}
+    .container{display:grid;grid-template-columns:1.2fr .9fr;gap:16px;max-width:1100px;margin:20px auto;padding:0 16px}
+    @media (max-width: 960px){.container{grid-template-columns:1fr;}}
+    .card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .left,.right{padding:16px}
+    .drop{border:1.5px dashed rgba(255,255,255,.2);border-radius:14px;padding:18px;text-align:center;color:var(--muted)}
+    .drop.drag{border-color:var(--accent);background:rgba(34,211,238,.04);color:#bff5fb}
+    .drop input{display:none}
+    .btn{appearance:none;border:none;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#0b1020;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
+    .btn.secondary{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.18)}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+    .toolbar .group{display:flex;gap:8px}
+    .toolbar input[type="range"]{width:140px}
+    .preview{display:grid;grid-template-columns:1fr;gap:10px}
+    .preview .frame{aspect-ratio:1/1;background:#0b1020;border-radius:12px;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .hint{font-size:12px;color:var(--muted)}
+    .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .row label{font-size:13px;color:var(--muted)}
+    .crop-area{width:100%;height:560px;display:flex;align-items:center;justify-content:center;background:#0b1020;border-radius:12px;border:1px solid rgba(255,255,255,.08);overflow:hidden}
+    img#source{max-width:100%;max-height:100%;display:block}
+    footer{max-width:1100px;margin:14px auto 40px;color:var(--muted);padding:0 16px}
+    .kbd{padding:2px 6px;border:1px solid rgba(255,255,255,.2);border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎧 Podcast 首圖裁切器｜固定 1:1、輸出至少 1400×1400</h1>
+  </header>
+  <main class="container">
+    <section class="card left">
+      <div class="drop" id="drop">
+        <p><strong>拖放圖片</strong> 到這裡，或 <label for="file" class="btn">選擇圖片</label></p>
+        <input type="file" id="file" accept="image/*" />
+        <p class="hint">支援 JPG / PNG / WEBP / HEIC（部分瀏覽器）等。建議原圖邊長 ≥ 1400px 以避免放大失真。</p>
+      </div>
+      <div class="crop-area" id="cropWrap" style="display:none">
+        <img id="source" alt="source" />
+      </div>
+      <div class="toolbar" id="tools" style="display:none">
+        <div class="group">
+          <button class="btn secondary" id="zoomIn">放大</button>
+          <button class="btn secondary" id="zoomOut">縮小</button>
+          <button class="btn secondary" id="moveLeft">左移</button>
+          <button class="btn secondary" id="moveRight">右移</button>
+          <button class="btn secondary" id="moveUp">上移</button>
+          <button class="btn secondary" id="moveDown">下移</button>
+          <button class="btn secondary" id="rotateLeft">左轉 45°</button>
+          <button class="btn secondary" id="rotateRight">右轉 45°</button>
+          <button class="btn secondary" id="reset">重置</button>
+        </div>
+        <div class="group">
+          <label>縮放 (<span id="zoomVal">100</span>%)</label>
+          <input id="scaleRange" type="range" min="50" max="300" value="100">
+        </div>
+      </div>
+    </section>
+    <aside class="card right">
+      <div class="right">
+        <h3 style="margin:0 0 8px">輸出設定</h3>
+        <div class="row">
+          <label for="size">輸出邊長（px）</label>
+          <input id="size" type="number" value="1400" min="1400" step="100" style="width:120px;padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--text)">
+          <span class="hint">至少 1400。若原圖不足會等比例放大。</span>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label>格式</label>
+          <select id="format" style="padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--text)">
+            <option value="image/png">PNG（無損）</option>
+            <option value="image/jpeg">JPEG（有損、小檔案）</option>
+            <option value="image/webp">WEBP（視瀏覽器）</option>
+          </select>
+          <label>品質</label>
+          <input id="quality" type="range" min="60" max="100" value="92">
+          <span id="qval" class="hint">92%</span>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input id="bgColor" type="color" value="#000000" />
+          <label for="bgColor">背景色（當輸出含透明處時生效）</label>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="exportBtn">下載裁切圖</button>
+          <button class="btn secondary" id="copyBtn" title="複製到剪貼簿（部分瀏覽器支援）">複製到剪貼簿</button>
+        </div>
+        <p class="hint" style="margin-top:6px">快速鍵：<span class="kbd">↑/↓/←/→</span> 移動、<span class="kbd">+</span>/<span class="kbd">-</span> 縮放、<span class="kbd">R</span> 重置。</p>
+        <hr style="border-color:rgba(255,255,255,.12)">
+        <h3 style="margin:10px 0 8px">即時預覽（輸出尺寸）</h3>
+        <div class="preview">
+          <div class="frame"><canvas id="preview" width="1400" height="1400"></canvas></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+  <footer>
+    <p>此工具完全在瀏覽器端執行，不上傳圖片。建議輸出 1400×1400（符合 Apple Podcast 規範），也可提高至 3000×3000。</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+  <script>
+    const fileInput = document.getElementById('file');
+    const drop = document.getElementById('drop');
+    const sourceImg = document.getElementById('source');
+    const cropWrap = document.getElementById('cropWrap');
+    const tools = document.getElementById('tools');
+    const previewCanvas = document.getElementById('preview');
+    const pctx = previewCanvas.getContext('2d');
+
+    const sizeInput = document.getElementById('size');
+    const formatSel = document.getElementById('format');
+    const qualityRange = document.getElementById('quality');
+    const qval = document.getElementById('qval');
+    const bgColor = document.getElementById('bgColor');
+    const exportBtn = document.getElementById('exportBtn');
+    const copyBtn = document.getElementById('copyBtn');
+
+    const zoomVal = document.getElementById('zoomVal');
+    const scaleRange = document.getElementById('scaleRange');
+
+    const zoomInBtn = document.getElementById('zoomIn');
+    const zoomOutBtn = document.getElementById('zoomOut');
+    const moveLeftBtn = document.getElementById('moveLeft');
+    const moveRightBtn = document.getElementById('moveRight');
+    const moveUpBtn = document.getElementById('moveUp');
+    const moveDownBtn = document.getElementById('moveDown');
+    const rotateLeftBtn = document.getElementById('rotateLeft');
+    const rotateRightBtn = document.getElementById('rotateRight');
+    const resetBtn = document.getElementById('reset');
+
+    let cropper = null;
+
+    // --- Helpers ---
+    function loadFile(file){
+      return new Promise((resolve,reject)=>{
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleFiles(files){
+      const file = files && files[0];
+      if(!file) return;
+      const url = await loadFile(file);
+      sourceImg.src = url;
+      sourceImg.onload = () => {
+        cropWrap.style.display = '';
+        tools.style.display = '';
+        initCropper();
+      }
+    }
+
+    function initCropper(){
+      if(cropper){cropper.destroy(); cropper=null}
+      cropper = new Cropper(sourceImg,{
+        viewMode:1,
+        aspectRatio:1,
+        dragMode:'move',
+        autoCropArea:1,
+        responsive:true,
+        background:false,
+        movable:true,
+        zoomable:true,
+        rotatable:true,
+        crop(){
+          drawPreview();
+        },
+        ready(){
+          drawPreview();
+        }
+      });
+      scaleRange.value = 100;
+      zoomVal.textContent = '100';
+    }
+
+    function drawPreview(){
+      if(!cropper) return;
+      const size = Math.max(1400, parseInt(sizeInput.value||1400,10));
+      previewCanvas.width = size;
+      previewCanvas.height = size;
+      const canvas = cropper.getCroppedCanvas({width:size, height:size, fillColor: bgColor.value});
+      pctx.clearRect(0,0,previewCanvas.width, previewCanvas.height);
+      pctx.drawImage(canvas,0,0);
+    }
+
+    function download(blob, filename){
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+    }
+
+    // --- Events: file input / DnD ---
+    fileInput.addEventListener('change', e=> handleFiles(e.target.files));
+    ;['dragenter','dragover'].forEach(evt=> drop.addEventListener(evt, e=>{e.preventDefault();e.stopPropagation();drop.classList.add('drag')}));
+    ;['dragleave','drop'].forEach(evt=> drop.addEventListener(evt, e=>{e.preventDefault();e.stopPropagation();drop.classList.remove('drag')}));
+    drop.addEventListener('drop', e=> handleFiles(e.dataTransfer.files));
+
+    // --- Tool buttons ---
+    zoomInBtn.onclick = ()=> cropper && cropper.zoom(0.1);
+    zoomOutBtn.onclick = ()=> cropper && cropper.zoom(-0.1);
+    moveLeftBtn.onclick = ()=> cropper && cropper.move(-10,0);
+    moveRightBtn.onclick = ()=> cropper && cropper.move(10,0);
+    moveUpBtn.onclick = ()=> cropper && cropper.move(0,-10);
+    moveDownBtn.onclick = ()=> cropper && cropper.move(0,10);
+    rotateLeftBtn.onclick = ()=> cropper && cropper.rotate(-45);
+    rotateRightBtn.onclick = ()=> cropper && cropper.rotate(45);
+    resetBtn.onclick = ()=> cropper && cropper.reset();
+
+    scaleRange.addEventListener('input', (e)=>{
+      const val = parseInt(e.target.value,10);
+      zoomVal.textContent = val;
+      if(!cropper) return;
+      // scale based on image initial scale
+      const scale = val/100;
+      const data = cropper.getData();
+      cropper.zoomTo(scale, {x: data.x + data.width/2, y: data.y + data.height/2});
+    });
+
+    // --- Export ---
+    exportBtn.addEventListener('click', async ()=>{
+      if(!cropper) return alert('請先上傳圖片');
+      const size = Math.max(1400, parseInt(sizeInput.value||1400,10));
+      const type = formatSel.value;
+      const quality = Math.min(1, Math.max(0.6, parseInt(qualityRange.value,10)/100));
+      const canvas = cropper.getCroppedCanvas({width:size, height:size, fillColor: bgColor.value});
+      canvas.toBlob((blob)=>{
+        if(!blob) return alert('輸出失敗，請嘗試較小尺寸或更換圖片');
+        const ext = type.split('/')[1] || 'png';
+        const filename = `podcast-cover-${size}x${size}.${ext}`;
+        download(blob, filename);
+      }, type, quality);
+    });
+
+    copyBtn.addEventListener('click', async ()=>{
+      if(!cropper) return alert('請先上傳圖片');
+      const size = Math.max(1400, parseInt(sizeInput.value||1400,10));
+      const type = formatSel.value;
+      const quality = Math.min(1, Math.max(0.6, parseInt(qualityRange.value,10)/100));
+      const canvas = cropper.getCroppedCanvas({width:size, height:size, fillColor: bgColor.value});
+      canvas.toBlob(async (blob)=>{
+        try{
+          await navigator.clipboard.write([
+            new ClipboardItem({[type]: blob})
+          ]);
+          alert('已複製到剪貼簿');
+        }catch(err){
+          console.error(err);
+          alert('無法複製（瀏覽器限制），請使用「下載」');
+        }
+      }, type, quality);
+    });
+
+    sizeInput.addEventListener('input', drawPreview);
+    formatSel.addEventListener('change', drawPreview);
+    qualityRange.addEventListener('input', ()=>{qval.textContent = qualityRange.value + '%'; drawPreview();});
+    bgColor.addEventListener('input', drawPreview);
+
+    // --- Keyboard shortcuts ---
+    window.addEventListener('keydown', (e)=>{
+      if(!cropper) return;
+      if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+      switch(e.key){
+        case 'ArrowUp': cropper.move(0,-10); break;
+        case 'ArrowDown': cropper.move(0,10); break;
+        case 'ArrowLeft': cropper.move(-10,0); break;
+        case 'ArrowRight': cropper.move(10,0); break;
+        case '+': case '=': cropper.zoom(0.1); break;
+        case '-': case '_': cropper.zoom(-0.1); break;
+        case 'r': case 'R': cropper.reset(); break;
+      }
+    });
+  </script>
+</body>
+</html>
