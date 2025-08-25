@@ -2,7 +2,7 @@
 
 一個用於 **Podcast 封面裁切與輸出** 的純前端工具。固定 **1:1** 比例，支援輸出 **至少 1400×1400**（也可到 3000×3000），整個流程皆在瀏覽器本機完成，不上傳圖片。
 
-👉 線上 Demo（GitHub Pages）請見本 repo 的 Pages 設定完成後的網址。
+👉 線上 Demo（GitHub Pages）請見本 repo 的 Pages 設定完成後的網址。https://lulumi7788.github.io/podcast-cover-cropper/
 
 ## 功能
 - 拖拉/選擇圖片，固定 1:1 裁切
@@ -19,19 +19,6 @@
 ## 開發
 - 純前端、單檔 `index.html`，以 CDN 引入 [Cropper.js](https://github.com/fengyuanchen/cropperjs)
 - 無打包流程與依賴，直接開檔可用
-
-## 部署到 GitHub Pages
-1. 建立 repo（例如 `podcast-cover-cropper`）並推送：
-   ```bash
-   git init
-   git add index.html README.md LICENSE .gitignore
-   git commit -m "init"
-   git branch -M main
-   git remote add origin https://github.com/<你的帳號>/podcast-cover-cropper.git
-   git push -u origin main
-   ```
-2. 前往 GitHub → Settings → Pages → Source → 選擇 `main` branch。
-3. 儲存後等待數分鐘，即可在 `https://<你的帳號>.github.io/podcast-cover-cropper/` 使用。
 
 ## 授權
 MIT License © 2025
