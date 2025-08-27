@@ -2,7 +2,7 @@
 
 一個用於 **Podcast 封面裁切與輸出** 的純前端工具。固定 **1:1** 比例，支援輸出 **至少 1400×1400**（也可到 3000×3000），整個流程皆在瀏覽器本機完成，不上傳圖片。
 
-👉 線上 Demo（GitHub Pages）請見本 repo 的 Pages 設定完成後的網址。https://lulumi7788.github.io/podcast-cover-cropper/
+👉 網址。https://lulumi7788.github.io/podcast-cover-cropper/
 
 ## 功能
 - 拖拉/選擇圖片，固定 1:1 裁切
