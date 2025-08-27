@@ -5,20 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Podcast 首圖裁切器｜1:1 至少 1400×1400</title>
   <meta name="description" content="將圖片裁成 1:1 並輸出 1400×1400（或更大）PNG / JPEG，適合 Podcast 封面上架使用。" />
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
   <style>
-    :root{--bg:#0f172a;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#22d3ee;--accent2:#60a5fa}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:sans-serif;background:linear-gradient(180deg,#0f172a,#111827);color:var(--text)}
-    header{padding:20px;text-align:center}
+    body{margin:0;font-family:sans-serif;background:#0f172a;color:#e5e7eb}
+    header{padding:20px;text-align:center;background:#111827}
+    h1{margin:0;font-size:20px}
     .container{display:grid;grid-template-columns:1.2fr .9fr;gap:16px;max-width:1100px;margin:20px auto;padding:0 16px}
-    @media (max-width:960px){.container{grid-template-columns:1fr;}}
-    .card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px}
-    .drop{border:1.5px dashed rgba(255,255,255,.2);border-radius:14px;padding:18px;text-align:center;color:var(--muted)}
-    .drop.drag{border-color:var(--accent);background:rgba(34,211,238,.04);color:#bff5fb}
-    .btn{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#0b1020;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;border:none}
-    .btn.secondary{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.18)}
+    @media(max-width:960px){.container{grid-template-columns:1fr;}}
+    .card{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:16px}
+    .drop{border:2px dashed #334155;border-radius:12px;padding:18px;text-align:center;color:#94a3b8}
+    .btn{background:#22d3ee;color:#0b1020;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer}
+    .btn.secondary{background:transparent;color:#e5e7eb;border:1px solid #475569}
     .crop-area{width:100%;height:560px;display:flex;align-items:center;justify-content:center;background:#0b1020;border-radius:12px;overflow:hidden}
     img#source{max-width:100%;max-height:100%;display:block}
     .preview .frame{width:280px;height:280px;background:#0b1020;border-radius:12px;overflow:hidden;margin-top:10px}
@@ -39,6 +36,12 @@
       <div id="tools" style="display:none;margin-top:10px">
         <button class="btn secondary" id="zoomIn">放大</button>
         <button class="btn secondary" id="zoomOut">縮小</button>
+        <button class="btn secondary" id="moveLeft">左移</button>
+        <button class="btn secondary" id="moveRight">右移</button>
+        <button class="btn secondary" id="moveUp">上移</button>
+        <button class="btn secondary" id="moveDown">下移</button>
+        <button class="btn secondary" id="rotateLeft">左轉45°</button>
+        <button class="btn secondary" id="rotateRight">右轉45°</button>
         <button class="btn secondary" id="reset">重置</button>
       </div>
     </section>
@@ -49,10 +52,93 @@
         <select id="format">
           <option value="image/png">PNG</option>
           <option value="image/jpeg">JPEG</option>
+          <option value="image/webp">WEBP</option>
         </select>
-      </label>
-      <br><br>
+      </label><br><br>
       <button class="btn" id="exportBtn">下載裁切圖</button>
       <div class="preview">
+        <h4>即時預覽（縮圖）</h4>
         <div class="frame"><canvas id="preview"></canvas></div>
-      </d
+      </div>
+    </aside>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+  <script>
+    const fileInput=document.getElementById('file');
+    const sourceImg=document.getElementById('source');
+    const cropWrap=document.getElementById('cropWrap');
+    const tools=document.getElementById('tools');
+    const previewCanvas=document.getElementById('preview');
+    const pctx=previewCanvas.getContext('2d');
+    const sizeInput=document.getElementById('size');
+    const formatSel=document.getElementById('format');
+    const exportBtn=document.getElementById('exportBtn');
+    const zoomInBtn=document.getElementById('zoomIn');
+    const zoomOutBtn=document.getElementById('zoomOut');
+    const moveLeftBtn=document.getElementById('moveLeft');
+    const moveRightBtn=document.getElementById('moveRight');
+    const moveUpBtn=document.getElementById('moveUp');
+    const moveDownBtn=document.getElementById('moveDown');
+    const rotateLeftBtn=document.getElementById('rotateLeft');
+    const rotateRightBtn=document.getElementById('rotateRight');
+    const resetBtn=document.getElementById('reset');
+
+    let cropper=null;
+
+    function loadFile(file){
+      return new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=()=>res(r.result);
+        r.onerror=rej;
+        r.readAsDataURL(file);
+      });
+    }
+
+    async function handleFiles(files){
+      const f=files[0]; if(!f) return;
+      const url=await loadFile(f);
+      sourceImg.src=url;
+      sourceImg.onload=()=>{
+        cropWrap.style.display=''; tools.style.display='';
+        if(cropper){cropper.destroy();}
+        cropper=new Cropper(sourceImg,{aspectRatio:1,viewMode:1,autoCropArea:1,ready:drawPreview,crop:drawPreview});
+      }
+    }
+
+    function drawPreview(){
+      if(!cropper) return;
+      const size=Math.max(1400,parseInt(sizeInput.value||1400,10));
+      const canvas=cropper.getCroppedCanvas({width:size,height:size});
+      const previewSize=280;
+      previewCanvas.width=previewSize; previewCanvas.height=previewSize;
+      pctx.clearRect(0,0,previewSize,previewSize);
+      pctx.drawImage(canvas,0,0,previewSize,previewSize);
+    }
+
+    exportBtn.onclick=()=>{
+      if(!cropper) return;
+      const size=Math.max(1400,parseInt(sizeInput.value||1400,10));
+      const type=formatSel.value;
+      const canvas=cropper.getCroppedCanvas({width:size,height:size});
+      canvas.toBlob((blob)=>{
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);
+        a.download=`podcast-cover-${size}.${type.split('/')[1]}`;
+        a.click();
+      },type,0.92);
+    }
+
+    fileInput.addEventListener('change',e=>handleFiles(e.target.files));
+    zoomInBtn.onclick=()=>cropper&&cropper.zoom(0.1);
+    zoomOutBtn.onclick=()=>cropper&&cropper.zoom(-0.1);
+    moveLeftBtn.onclick=()=>cropper&&cropper.move(-10,0);
+    moveRightBtn.onclick=()=>cropper&&cropper.move(10,0);
+    moveUpBtn.onclick=()=>cropper&&cropper.move(0,-10);
+    moveDownBtn.onclick=()=>cropper&&cropper.move(0,10);
+    rotateLeftBtn.onclick=()=>cropper&&cropper.rotate(-45);
+    rotateRightBtn.onclick=()=>cropper&&cropper.rotate(45);
+    resetBtn.onclick=()=>cropper&&cropper.reset();
+  </script>
+</body>
+</html>
